@@ -1,0 +1,11 @@
+---
+
+# ORACLE_HOME to backup:
+oracle_homes_backup_ora_home:
+
+# ORACLE_HOME backup directory
+oracle_homes_backup_dir: /path/to/backup/dir
+
+# display message about location of a backup directory
+oracle_homes_backup_display_backup_message: true
+

@@ -1,0 +1,51 @@
+---
+
+- name: assert that ORACLE_HOME is not empty
+  assert:
+    that:
+      - "oracle_homes_backup_ora_home|default('', true) != ''"
+    fail_msg: "'oracle_homes_backup_ora_home' must not be empty"
+  tags:
+    - oracle_homes_backup_precheck
+
+- name: create backup directory for ORACLE_HOME backups
+  file:
+    dest: "{{ oracle_homes_backup_dir }}"
+    state: directory
+    owner: '{{ oracle_user }}'
+    mode: 0777
+  tags:
+    - oracle_homes_backup_create_directory
+
+- name: starting backup
+  debug:
+    msg: "Backing up ORACLE_HOME={{ oracle_homes_backup_ora_home }} to {{ oracle_homes_backup_dir }} .."
+  when: oracle_homes_backup_display_backup_message
+  tags:
+    - oracle_homes_backup_start_backup_message
+
+- name: archive ORACLE_HOME
+  shell: |
+    PARENTDIR=$(dirname {{ oracle_homes_backup_ora_home }})
+    DIRNAME=$(basename {{ oracle_homes_backup_ora_home }}) 
+    TIMESTAMP=$(date +%Y-%m-%d_%H%M%S)
+    cd $PARENTDIR
+    sudo tar --create --preserve-permissions --ignore-failed-read --warning=no-file-changed --warning=no-file-removed --totals --exclude em-application.log --file {{ oracle_homes_backup_dir }}/$(hostname -s).${DIRNAME}.${TIMESTAMP}.tar --verbose $DIRNAME > {{ oracle_homes_backup_dir }}/tar_archive.$(hostname -s).${DIRNAME}.${TIMESTAMP}.log
+  become: false
+  args:
+    warn: false
+  register: _oracle_homes_backup_tar_output
+  ignore_errors: yes
+  check_mode: no
+#  when: not ansible_check_mode
+  tags: 
+    - oracle_homes_backup_archive_oracle_home
+
+- name: display error message
+  fail:
+    msg: "{{ _oracle_homes_backup_tar_output.stdout_lines }}"
+  when: _oracle_homes_backup_tar_output.rc|default(0,true) != 0
+#  when: not ansible_check_mode and _oracle_homes_backup_tar_output.rc|default(0,true) != 0
+  tags:
+    - oracle_homes_backup_archive_error_message
+
